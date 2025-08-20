@@ -36,7 +36,7 @@ RUN mkdir -p /runpod-volume/hf_cache || true
 ENV MODEL_ID=deepseek-ai/DeepSeek-V3 \
     QUANTIZATION=fp8 \
     TORCH_DTYPE=auto \
-    KV_CACHE_DTYPE=fp8 \
+    KV_CACHE_DTYPE=auto \
     TENSOR_PARALLEL_SIZE=1 \
     GPU_MEMORY_UTILIZATION=0.90
 

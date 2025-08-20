@@ -22,7 +22,8 @@ GPU_MEM_UTILIZATION: float = float(os.getenv("GPU_MEMORY_UTILIZATION", "0.90"))
 MAX_MODEL_LEN: Optional[int] = int(os.getenv("MAX_MODEL_LEN", "0")) or None
 
 # Optional: use FP8 KV cache if available in your vLLM build/GPU stack (H100 recommended)
-KV_CACHE_DTYPE: Optional[str] = os.getenv("KV_CACHE_DTYPE", "fp8")  # fp8 | fp16 | auto
+# Note: DeepSeek MLA architecture doesn't support FP8 KV cache yet in vLLM
+KV_CACHE_DTYPE: Optional[str] = os.getenv("KV_CACHE_DTYPE", "auto")  # fp8 | fp16 | auto
 
 
 _LLM_INSTANCE: Optional[LLM] = None
