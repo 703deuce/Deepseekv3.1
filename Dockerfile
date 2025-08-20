@@ -16,11 +16,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ln -s /usr/bin/python3 /usr/bin/python && \
     rm -rf /var/lib/apt/lists/*
 
-# PyTorch (CUDA 12.1) + latest vLLM + runpod runtime
+# PyTorch (CUDA 12.1) + stable vLLM 0.6.6 + runpod runtime
 RUN pip install --upgrade pip && \
     pip install --no-cache-dir --extra-index-url https://download.pytorch.org/whl/cu121 \
         torch torchvision torchaudio && \
-    pip install --no-cache-dir vllm runpod
+    pip install --no-cache-dir vllm==0.6.6 runpod
 
 # Optional: HF token can be set at runtime via environment variables
 # ARG HF_TOKEN
