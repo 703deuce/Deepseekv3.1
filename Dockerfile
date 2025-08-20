@@ -8,10 +8,11 @@ ENV DEBIAN_FRONTEND=noninteractive \
 
 WORKDIR /app
 
-# System deps including C++ compiler for vLLM/Triton
+# System deps including C++ compiler and CUDA dev tools for vLLM/Triton
 RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 python3-pip git ca-certificates \
-    build-essential gcc g++ && \
+    build-essential gcc g++ \
+    cuda-nvcc-12-1 cuda-cudart-dev-12-1 libcuda1 && \
     ln -s /usr/bin/python3 /usr/bin/python && \
     rm -rf /var/lib/apt/lists/*
 
