@@ -21,9 +21,9 @@ TP_SIZE: int = int(os.getenv("TENSOR_PARALLEL_SIZE", os.getenv("TP_SIZE", "1")))
 GPU_MEM_UTILIZATION: float = float(os.getenv("GPU_MEMORY_UTILIZATION", "0.90"))
 MAX_MODEL_LEN: Optional[int] = int(os.getenv("MAX_MODEL_LEN", "16384")) or None
 
-# Optimal for 48GB GPU: FP8 weights + auto KV cache (vLLM will select best supported dtype)
-# Note: DeepSeek MLA architecture doesn't support FP8 KV cache yet in vLLM
-KV_CACHE_DTYPE: Optional[str] = os.getenv("KV_CACHE_DTYPE", "auto")  # auto | fp8 | fp8_e4m3 | fp8_e5m2 | fp8_inc
+# Optimal for 48GB GPU: FP8 weights + BF16 KV cache (supported in vLLM 0.6.6)
+# Note: vLLM 0.6.6 explicitly supports bfloat16 KV cache with DeepSeek-V3
+KV_CACHE_DTYPE: Optional[str] = os.getenv("KV_CACHE_DTYPE", "bfloat16")  # bfloat16 | float16 | auto | fp8
 
 
 _LLM_INSTANCE: Optional[LLM] = None

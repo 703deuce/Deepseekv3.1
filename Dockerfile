@@ -16,11 +16,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ln -s /usr/bin/python3 /usr/bin/python && \
     rm -rf /var/lib/apt/lists/*
 
-# PyTorch (CUDA 12.1) + vLLM + runpod runtime
+# PyTorch (CUDA 12.1) + vLLM 0.6.6 (supports BF16 KV cache) + runpod runtime
 RUN pip install --upgrade pip && \
     pip install --no-cache-dir --extra-index-url https://download.pytorch.org/whl/cu121 \
         torch torchvision torchaudio && \
-    pip install --no-cache-dir vllm runpod
+    pip install --no-cache-dir vllm==0.6.6 runpod
 
 # Optional: HF token can be set at runtime via environment variables
 # ARG HF_TOKEN
@@ -32,11 +32,11 @@ COPY handler.py /app/handler.py
 # Ensure persistent cache directory exists at runtime
 RUN mkdir -p /runpod-volume/hf_cache || true
 
-# Optimal config for 48GB GPU: FP8 weights + auto KV cache + 16K context
+# Optimal config for 48GB GPU: FP8 weights + BF16 KV cache + 16K context (vLLM 0.6.6)
 ENV MODEL_ID=deepseek-ai/DeepSeek-V3 \
     QUANTIZATION=fp8 \
     TORCH_DTYPE=auto \
-    KV_CACHE_DTYPE=auto \
+    KV_CACHE_DTYPE=bfloat16 \
     MAX_MODEL_LEN=16384 \
     TENSOR_PARALLEL_SIZE=1 \
     GPU_MEMORY_UTILIZATION=0.90
