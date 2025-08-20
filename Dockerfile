@@ -8,9 +8,10 @@ ENV DEBIAN_FRONTEND=noninteractive \
 
 WORKDIR /app
 
-# System deps
+# System deps including C++ compiler for vLLM/Triton
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    python3 python3-pip git ca-certificates && \
+    python3 python3-pip git ca-certificates \
+    build-essential gcc g++ && \
     ln -s /usr/bin/python3 /usr/bin/python && \
     rm -rf /var/lib/apt/lists/*
 
