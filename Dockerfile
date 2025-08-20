@@ -16,13 +16,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # PyTorch (CUDA 12.1) + vLLM + runpod runtime
 RUN pip install --upgrade pip && \
-    pip install --extra-index-url https://download.pytorch.org/whl/cu121 \
+    pip install --no-cache-dir --extra-index-url https://download.pytorch.org/whl/cu121 \
         torch torchvision torchaudio && \
-    pip install vllm==0.5.4.post1 runpod==1.7.1
+    pip install --no-cache-dir vllm runpod
 
-# Optional: pre-auth to HF via build-arg (not recommended) or mount at runtime
-ARG HF_TOKEN
-ENV HUGGING_FACE_HUB_TOKEN=${HF_TOKEN}
+# Optional: HF token can be set at runtime via environment variables
+# ARG HF_TOKEN
+# ENV HUGGING_FACE_HUB_TOKEN=${HF_TOKEN}
 
 # Copy code
 COPY handler.py /app/handler.py
@@ -39,6 +39,6 @@ ENV MODEL_ID=deepseek-ai/DeepSeek-V3.1-Base \
     GPU_MEMORY_UTILIZATION=0.90
 
 # RunPod serverless entry
-CMD ["python", "handler.py"]
+CMD ["python3", "handler.py"]
 
 
