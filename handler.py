@@ -5,6 +5,13 @@ import runpod
 from vllm import LLM, SamplingParams
 
 
+# Ensure a persistent HF cache on RunPod network volume
+_DEFAULT_PERSISTENT_CACHE = \
+    os.getenv("PERSISTENT_HF_CACHE", "/runpod-volume/hf_cache")
+for _var in ("HF_HOME", "HUGGINGFACE_HUB_CACHE", "TRANSFORMERS_CACHE"):
+    os.environ.setdefault(_var, _DEFAULT_PERSISTENT_CACHE)
+os.makedirs(os.environ["HF_HOME"], exist_ok=True)
+
 # Configuration via environment variables for flexibility at deploy time
 MODEL_ID: str = os.getenv("MODEL_ID", "deepseek-ai/DeepSeek-V3.1-Base")
 # For FP8 preference, we try quantization="fp8" first, then fall back gracefully if unsupported

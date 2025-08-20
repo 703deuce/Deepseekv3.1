@@ -2,8 +2,9 @@ FROM nvidia/cuda:12.1.1-cudnn8-runtime-ubuntu22.04
 
 ENV DEBIAN_FRONTEND=noninteractive \
     PIP_NO_CACHE_DIR=1 \
-    HUGGINGFACE_HUB_CACHE=/app/hf_cache \
-    HF_HOME=/app/hf_cache
+    HF_HOME=/runpod-volume/hf_cache \
+    HUGGINGFACE_HUB_CACHE=/runpod-volume/hf_cache \
+    TRANSFORMERS_CACHE=/runpod-volume/hf_cache
 
 WORKDIR /app
 
@@ -25,6 +26,9 @@ ENV HUGGING_FACE_HUB_TOKEN=${HF_TOKEN}
 
 # Copy code
 COPY handler.py /app/handler.py
+
+# Ensure persistent cache directory exists at runtime
+RUN mkdir -p /runpod-volume/hf_cache || true
 
 # Default envs for FP8 on vLLM where supported
 ENV MODEL_ID=deepseek-ai/DeepSeek-V3.1-Base \
