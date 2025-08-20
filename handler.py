@@ -14,9 +14,9 @@ os.makedirs(os.environ["HF_HOME"], exist_ok=True)
 
 # Configuration via environment variables for flexibility at deploy time
 MODEL_ID: str = os.getenv("MODEL_ID", "deepseek-ai/DeepSeek-V3")
-# Use BF16 for model weights instead of FP8
-QUANTIZATION: Optional[str] = os.getenv("QUANTIZATION", None)  # No quantization, use full precision
-TORCH_DTYPE: str = os.getenv("TORCH_DTYPE", "bfloat16")  # bfloat16 | auto | float16 | float32
+# Use FP8 quantization for memory efficiency on 48GB GPU
+QUANTIZATION: Optional[str] = os.getenv("QUANTIZATION", "fp8")  # fp8 quantization for large models
+TORCH_DTYPE: str = os.getenv("TORCH_DTYPE", "auto")  # auto | bfloat16 | float16 | float32
 TP_SIZE: int = int(os.getenv("TENSOR_PARALLEL_SIZE", os.getenv("TP_SIZE", "1")))
 GPU_MEM_UTILIZATION: float = float(os.getenv("GPU_MEMORY_UTILIZATION", "0.90"))
 MAX_MODEL_LEN: Optional[int] = int(os.getenv("MAX_MODEL_LEN", "16384")) or None
@@ -50,14 +50,14 @@ def _build_llm() -> LLM:
     if KV_CACHE_DTYPE and KV_CACHE_DTYPE.lower() != "auto":
         init_kwargs["kv_cache_dtype"] = KV_CACHE_DTYPE
 
-    # Use quantization if specified, otherwise use full precision
+    # Try with quantization first (recommended for large models)
     if QUANTIZATION:
         try:
             return LLM(quantization=QUANTIZATION, **init_kwargs)
         except Exception:
             pass
 
-    # Standard initialization with specified dtype (bfloat16 by default)
+    # Fallback without quantization if it fails
     return LLM(**init_kwargs)
 
 
