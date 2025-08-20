@@ -21,9 +21,9 @@ TP_SIZE: int = int(os.getenv("TENSOR_PARALLEL_SIZE", os.getenv("TP_SIZE", "1")))
 GPU_MEM_UTILIZATION: float = float(os.getenv("GPU_MEMORY_UTILIZATION", "0.90"))
 MAX_MODEL_LEN: Optional[int] = int(os.getenv("MAX_MODEL_LEN", "16384")) or None
 
-# Optimal for 48GB GPU: FP8 weights + BF16 KV cache (supported in vLLM 0.6.6)
-# Note: vLLM 0.6.6 explicitly supports bfloat16 KV cache with DeepSeek-V3
-KV_CACHE_DTYPE: Optional[str] = os.getenv("KV_CACHE_DTYPE", "bfloat16")  # bfloat16 | float16 | auto | fp8
+# Optimal for 48GB GPU: FP8 weights + FP16 KV cache (universally supported in vLLM 0.6.6)
+# Note: float16 is more universally supported than bfloat16 across different hardware
+KV_CACHE_DTYPE: Optional[str] = os.getenv("KV_CACHE_DTYPE", "float16")  # float16 | bfloat16 | auto | fp8
 
 
 _LLM_INSTANCE: Optional[LLM] = None
@@ -46,10 +46,9 @@ def _build_llm() -> LLM:
     if MAX_MODEL_LEN is not None:
         init_kwargs["max_model_len"] = MAX_MODEL_LEN
 
-    # Skip KV cache dtype for now - let vLLM auto-select compatible type
-    # Note: vLLM will automatically choose BF16/FP16 that works with DeepSeek MLA
-    # if KV_CACHE_DTYPE and KV_CACHE_DTYPE.lower() != "auto":
-    #     init_kwargs["kv_cache_dtype"] = KV_CACHE_DTYPE
+    # Set KV cache dtype - use float16 for universal compatibility
+    if KV_CACHE_DTYPE and KV_CACHE_DTYPE.lower() != "auto":
+        init_kwargs["kv_cache_dtype"] = KV_CACHE_DTYPE
 
     # Try quantization flag first (e.g., "fp8"). If it fails, retry without.
     if QUANTIZATION:
