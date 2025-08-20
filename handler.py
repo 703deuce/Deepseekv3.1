@@ -14,9 +14,9 @@ os.makedirs(os.environ["HF_HOME"], exist_ok=True)
 
 # Configuration via environment variables for flexibility at deploy time
 MODEL_ID: str = os.getenv("MODEL_ID", "deepseek-ai/DeepSeek-V3")
-# Use FP8 quantization for memory efficiency on 48GB GPU
-QUANTIZATION: Optional[str] = os.getenv("QUANTIZATION", "fp8")  # fp8 quantization for large models
-TORCH_DTYPE: str = os.getenv("TORCH_DTYPE", "auto")  # auto | bfloat16 | float16 | float32
+# Use bfloat16 precision instead of FP8 quantization
+QUANTIZATION: Optional[str] = os.getenv("QUANTIZATION", None)  # No quantization
+TORCH_DTYPE: str = os.getenv("TORCH_DTYPE", "bfloat16")  # bfloat16 for stability
 TP_SIZE: int = int(os.getenv("TENSOR_PARALLEL_SIZE", os.getenv("TP_SIZE", "1")))
 GPU_MEM_UTILIZATION: float = float(os.getenv("GPU_MEMORY_UTILIZATION", "0.90"))
 MAX_MODEL_LEN: Optional[int] = int(os.getenv("MAX_MODEL_LEN", "16384")) or None
