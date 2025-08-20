@@ -33,7 +33,7 @@ COPY handler.py /app/handler.py
 RUN mkdir -p /runpod-volume/hf_cache || true
 
 # Default envs for FP8 on vLLM where supported
-ENV MODEL_ID=deepseek-ai/DeepSeek-V3.1-Base \
+ENV MODEL_ID=deepseek-ai/DeepSeek-V3 \
     QUANTIZATION=fp8 \
     TORCH_DTYPE=auto \
     KV_CACHE_DTYPE=fp8 \
