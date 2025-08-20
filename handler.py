@@ -14,16 +14,16 @@ os.makedirs(os.environ["HF_HOME"], exist_ok=True)
 
 # Configuration via environment variables for flexibility at deploy time
 MODEL_ID: str = os.getenv("MODEL_ID", "deepseek-ai/DeepSeek-V3")
-# For FP8 preference, we try quantization="fp8" first, then fall back gracefully if unsupported
-QUANTIZATION: Optional[str] = os.getenv("QUANTIZATION", "fp8")
-TORCH_DTYPE: str = os.getenv("TORCH_DTYPE", "auto")  # auto | float16 | bfloat16 | float32
+# Use BF16 for model weights instead of FP8
+QUANTIZATION: Optional[str] = os.getenv("QUANTIZATION", None)  # No quantization, use full precision
+TORCH_DTYPE: str = os.getenv("TORCH_DTYPE", "bfloat16")  # bfloat16 | auto | float16 | float32
 TP_SIZE: int = int(os.getenv("TENSOR_PARALLEL_SIZE", os.getenv("TP_SIZE", "1")))
 GPU_MEM_UTILIZATION: float = float(os.getenv("GPU_MEMORY_UTILIZATION", "0.90"))
 MAX_MODEL_LEN: Optional[int] = int(os.getenv("MAX_MODEL_LEN", "16384")) or None
 
-# Optimal for 48GB GPU: FP8 weights + FP16 KV cache (universally supported in vLLM 0.6.6)
-# Note: float16 is more universally supported than bfloat16 across different hardware
-KV_CACHE_DTYPE: Optional[str] = os.getenv("KV_CACHE_DTYPE", "float16")  # float16 | bfloat16 | auto | fp8
+# Use auto KV cache - let vLLM choose the best option
+# Note: auto will select the optimal dtype for the hardware and model
+KV_CACHE_DTYPE: Optional[str] = os.getenv("KV_CACHE_DTYPE", "auto")  # auto | float16 | bfloat16 | fp8
 
 
 _LLM_INSTANCE: Optional[LLM] = None
@@ -46,22 +46,18 @@ def _build_llm() -> LLM:
     if MAX_MODEL_LEN is not None:
         init_kwargs["max_model_len"] = MAX_MODEL_LEN
 
-    # Set KV cache dtype - use float16 for universal compatibility
+    # Set KV cache dtype if not auto
     if KV_CACHE_DTYPE and KV_CACHE_DTYPE.lower() != "auto":
         init_kwargs["kv_cache_dtype"] = KV_CACHE_DTYPE
 
-    # Try quantization flag first (e.g., "fp8"). If it fails, retry without.
+    # Use quantization if specified, otherwise use full precision
     if QUANTIZATION:
         try:
             return LLM(quantization=QUANTIZATION, **init_kwargs)
         except Exception:
             pass
 
-    # Fallback without quantization
-    # Favor bfloat16 on modern GPUs; leave override via TORCH_DTYPE env.
-    if TORCH_DTYPE == "auto":
-        init_kwargs["dtype"] = "bfloat16"
-
+    # Standard initialization with specified dtype (bfloat16 by default)
     return LLM(**init_kwargs)
 
 
