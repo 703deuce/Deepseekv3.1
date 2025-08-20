@@ -32,11 +32,11 @@ COPY handler.py /app/handler.py
 # Ensure persistent cache directory exists at runtime
 RUN mkdir -p /runpod-volume/hf_cache || true
 
-# Optimal config for 48GB GPU: FP8 weights + BF16 KV cache + 16K context
+# Optimal config for 48GB GPU: FP8 weights + auto KV cache + 16K context
 ENV MODEL_ID=deepseek-ai/DeepSeek-V3 \
     QUANTIZATION=fp8 \
     TORCH_DTYPE=auto \
-    KV_CACHE_DTYPE=bfloat16 \
+    KV_CACHE_DTYPE=auto \
     MAX_MODEL_LEN=16384 \
     TENSOR_PARALLEL_SIZE=1 \
     GPU_MEMORY_UTILIZATION=0.90
