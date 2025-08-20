@@ -46,9 +46,10 @@ def _build_llm() -> LLM:
     if MAX_MODEL_LEN is not None:
         init_kwargs["max_model_len"] = MAX_MODEL_LEN
 
-    # Prefer FP8 where possible
-    if KV_CACHE_DTYPE:
-        init_kwargs["kv_cache_dtype"] = KV_CACHE_DTYPE
+    # Skip KV cache dtype for now - let vLLM auto-select compatible type
+    # Note: vLLM will automatically choose BF16/FP16 that works with DeepSeek MLA
+    # if KV_CACHE_DTYPE and KV_CACHE_DTYPE.lower() != "auto":
+    #     init_kwargs["kv_cache_dtype"] = KV_CACHE_DTYPE
 
     # Try quantization flag first (e.g., "fp8"). If it fails, retry without.
     if QUANTIZATION:
