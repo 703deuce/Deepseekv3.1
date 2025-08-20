@@ -10,7 +10,7 @@ WORKDIR /app
 
 # System deps including C++ compiler and CUDA dev tools for vLLM/Triton
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    python3 python3-pip git ca-certificates \
+    python3 python3-pip python3-dev git ca-certificates \
     build-essential gcc g++ \
     cuda-nvcc-12-1 cuda-cudart-dev-12-1 libcuda1 && \
     ln -s /usr/bin/python3 /usr/bin/python && \
