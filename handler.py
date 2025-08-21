@@ -13,10 +13,12 @@ for _var in ("HF_HOME", "HUGGINGFACE_HUB_CACHE", "TRANSFORMERS_CACHE"):
 os.makedirs(os.environ["HF_HOME"], exist_ok=True)
 
 # Configuration via environment variables for flexibility at deploy time
-MODEL_ID: str = os.getenv("MODEL_ID", "deepseek-ai/DeepSeek-V3")
+MODEL_ID: str = os.getenv("MODEL_ID", "deepseek-ai/DeepSeek-V3.1")
 TORCH_DTYPE: str = os.getenv("TORCH_DTYPE", "fp8")  # fp8 | bfloat16 | float16 | auto
 MAX_NEW_TOKENS: int = int(os.getenv("MAX_NEW_TOKENS", "512"))
 GPU_MEM_UTILIZATION: float = float(os.getenv("GPU_MEMORY_UTILIZATION", "0.90"))
+# DeepSeek-V3.1 specific: thinking mode support
+THINKING_MODE: bool = os.getenv("THINKING_MODE", "false").lower() == "true"
 
 # Global model and tokenizer instances
 _MODEL_INSTANCE: Optional[Any] = None
@@ -24,11 +26,26 @@ _TOKENIZER_INSTANCE: Optional[Any] = None
 
 
 def _load_model_and_tokenizer():
-    """Load DeepSeek-V3 model and tokenizer using official method."""
+    """Load DeepSeek-V3.1 model and tokenizer using official method."""
     global _MODEL_INSTANCE, _TOKENIZER_INSTANCE
     
     if _MODEL_INSTANCE is None or _TOKENIZER_INSTANCE is None:
-        print(f"Loading DeepSeek-V3 model from {MODEL_ID}...")
+        # Check B200 GPU compatibility
+        if torch.cuda.is_available():
+            device_name = torch.cuda.get_device_name(0)
+            device_capability = torch.cuda.get_device_capability(0)
+            print(f"GPU: {device_name}, Compute Capability: {device_capability}")
+            print(f"PyTorch version: {torch.__version__}")
+            print(f"CUDA version: {torch.version.cuda}")
+            
+            # Test basic CUDA functionality for B200
+            try:
+                test_tensor = torch.rand(2, 2).cuda()
+                print("✅ CUDA test successful - B200 compatible")
+            except Exception as e:
+                print(f"❌ CUDA test failed: {e}")
+        
+        print(f"Loading DeepSeek-V3.1 model from {MODEL_ID}...")
         
         # Load tokenizer
         _TOKENIZER_INSTANCE = AutoTokenizer.from_pretrained(
@@ -91,13 +108,14 @@ def _normalize_prompt(event: Dict[str, Any]) -> str:
 
     messages: Optional[List[Dict[str, str]]] = event.get("messages")
     if isinstance(messages, list) and messages:
-        # Use DeepSeek chat template if available
+        # Use DeepSeek-V3.1 chat template with thinking mode support
         try:
             model, tokenizer = _load_model_and_tokenizer()
             if hasattr(tokenizer, 'apply_chat_template'):
                 return tokenizer.apply_chat_template(
                     messages, 
                     tokenize=False, 
+                    thinking=THINKING_MODE,  # V3.1 thinking mode support
                     add_generation_prompt=True
                 )
         except:

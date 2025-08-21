@@ -17,10 +17,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ln -s /usr/bin/python3 /usr/bin/python && \
     rm -rf /var/lib/apt/lists/*
 
-# PyTorch + DeepSeek-Infer dependencies for FP8 support + runpod runtime
+# PyTorch + DeepSeek-Infer dependencies with B200 support + runpod runtime
 RUN pip install --upgrade pip && \
-    pip install --no-cache-dir --extra-index-url https://download.pytorch.org/whl/cu121 \
-        torch==2.4.1 triton==3.0.0 transformers==4.46.3 safetensors==0.4.5 && \
+    pip install --no-cache-dir --extra-index-url https://download.pytorch.org/whl/cu124 \
+        torch torchvision torchaudio triton && \
+    pip install --no-cache-dir transformers==4.46.3 safetensors==0.4.5 && \
     pip install --no-cache-dir runpod accelerate bitsandbytes
 
 # Optional: HF token can be set at runtime via environment variables
@@ -33,10 +34,11 @@ COPY handler.py /app/handler.py
 # Ensure persistent cache directory exists at runtime
 RUN mkdir -p /runpod-volume/hf_cache || true
 
-# Config for 48GB GPU: DeepSeek-Infer with FP8 quantization + Flash Attention
-ENV MODEL_ID=deepseek-ai/DeepSeek-V3 \
+# Config for B200 GPU: DeepSeek-V3.1 with FP8 quantization + Flash Attention + Thinking Mode
+ENV MODEL_ID=deepseek-ai/DeepSeek-V3.1 \
     TORCH_DTYPE=fp8 \
     MAX_NEW_TOKENS=512 \
+    THINKING_MODE=false \
     GPU_MEMORY_UTILIZATION=0.90
 
 # RunPod serverless entry
