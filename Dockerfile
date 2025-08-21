@@ -23,7 +23,12 @@ RUN pip install --upgrade pip && \
     pip install --no-cache-dir --extra-index-url https://download.pytorch.org/whl/cu130 \
         "torch>=2.7.0" "torchvision>=0.20.0" "torchaudio>=2.7.0" triton && \
     pip install --no-cache-dir transformers==4.46.3 safetensors==0.4.5 && \
-    pip install --no-cache-dir runpod accelerate bitsandbytes
+    pip install --no-cache-dir runpod accelerate
+
+# Clone DeepSeek's official inference repo for true FP8 support
+RUN git clone https://github.com/deepseek-ai/DeepSeek-V3.git /app/deepseek-v3 && \
+    cd /app/deepseek-v3 && \
+    pip install --no-cache-dir -r requirements.txt
 
 # Optional: HF token can be set at runtime via environment variables
 # ARG HF_TOKEN
@@ -35,8 +40,9 @@ COPY handler.py /app/handler.py
 # Ensure persistent cache directory exists at runtime
 RUN mkdir -p /runpod-volume/hf_cache || true
 
-# Production config for B200 Blackwell inference: DeepSeek-V3.1 + CUDA 13.0 + optimized sm_100
+# Production config for B200 Blackwell inference: DeepSeek-V3.1 + official FP8 quantization
 ENV MODEL_ID=deepseek-ai/DeepSeek-V3.1 \
+    QUANTIZATION_MODE=fp8 \
     TORCH_DTYPE=bfloat16 \
     MAX_NEW_TOKENS=512 \
     THINKING_MODE=false \
