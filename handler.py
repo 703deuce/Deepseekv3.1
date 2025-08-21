@@ -161,6 +161,63 @@ def _generate_with_deepseek(prompt: str, max_new_tokens: int = 512, temperature:
         os.chdir(original_cwd)
 
 
+def _generate_with_transformers_8bit(prompt: str, max_new_tokens: int = 512, temperature: float = 0.7) -> str:
+    """Fallback generation using Transformers with proper 8-bit quantization (NOT fp8)."""
+    try:
+        from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
+        import torch
+        
+        print("Loading model with Transformers + BitsAndBytes 8-bit quantization...")
+        
+        # Load tokenizer
+        tokenizer = AutoTokenizer.from_pretrained(
+            MODEL_ID,
+            trust_remote_code=True,
+            cache_dir=_DEFAULT_PERSISTENT_CACHE
+        )
+        
+        # Configure proper 8-bit quantization (NOT fp8!)
+        quantization_config = BitsAndBytesConfig(
+            load_in_8bit=True  # This works with Transformers
+        )
+        
+        # Load model with 8-bit quantization
+        model = AutoModelForCausalLM.from_pretrained(
+            MODEL_ID,
+            quantization_config=quantization_config,
+            torch_dtype=torch.bfloat16,
+            device_map="auto",
+            trust_remote_code=True,
+            cache_dir=_DEFAULT_PERSISTENT_CACHE,
+            low_cpu_mem_usage=True
+        )
+        
+        # Tokenize input
+        inputs = tokenizer(prompt, return_tensors="pt", padding=True, truncation=True, max_length=4096)
+        inputs = {k: v.to(model.device) for k, v in inputs.items()}
+        
+        # Generate
+        with torch.no_grad():
+            outputs = model.generate(
+                **inputs,
+                max_new_tokens=max_new_tokens,
+                temperature=temperature,
+                do_sample=temperature > 0.0,
+                pad_token_id=tokenizer.eos_token_id,
+                eos_token_id=tokenizer.eos_token_id
+            )
+        
+        # Decode only the new tokens
+        input_length = inputs['input_ids'].shape[1]
+        generated_tokens = outputs[0][input_length:]
+        generated_text = tokenizer.decode(generated_tokens, skip_special_tokens=True)
+        
+        return generated_text
+        
+    except Exception as e:
+        return f"Transformers generation failed: {e}"
+
+
 def _normalize_prompt(event: Dict[str, Any]) -> str:
     """Accept either a raw 'prompt' string or OpenAI-style 'messages'."""
     if isinstance(event.get("prompt"), str):
@@ -176,7 +233,7 @@ def _normalize_prompt(event: Dict[str, Any]) -> str:
             parts.append(f"{role}: {content}")
         parts.append("assistant:")
         return "\n".join(parts)
-
+    
     # Default prompt
     return "Hello, DeepSeek!"
 
@@ -199,10 +256,9 @@ def handler(event_or_job: Dict[str, Any]) -> Dict[str, Any]:
             generated_text = _generate_with_deepseek(prompt, max_new_tokens, temperature)
             quantization_used = "fp8_official"
         else:
-            return {
-                "error": "Failed to convert model to FP8",
-                "status": "FAILED"
-            }
+            print("DeepSeek FP8 conversion failed, using Transformers with 8-bit quantization...")
+            generated_text = _generate_with_transformers_8bit(prompt, max_new_tokens, temperature)
+            quantization_used = "bitsandbytes_8bit"
         
         # Format response for RunPod
         return {
