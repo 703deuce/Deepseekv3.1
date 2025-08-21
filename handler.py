@@ -14,7 +14,7 @@ os.makedirs(os.environ["HF_HOME"], exist_ok=True)
 
 # Configuration via environment variables for flexibility at deploy time
 MODEL_ID: str = os.getenv("MODEL_ID", "deepseek-ai/DeepSeek-V3.1")
-TORCH_DTYPE: str = os.getenv("TORCH_DTYPE", "fp8")  # fp8 | bfloat16 | float16 | auto
+TORCH_DTYPE: str = os.getenv("TORCH_DTYPE", "bfloat16")  # bfloat16 | float16 | auto
 MAX_NEW_TOKENS: int = int(os.getenv("MAX_NEW_TOKENS", "512"))
 GPU_MEM_UTILIZATION: float = float(os.getenv("GPU_MEMORY_UTILIZATION", "0.90"))
 # DeepSeek-V3.1 specific: thinking mode support
@@ -73,7 +73,7 @@ def _load_model_and_tokenizer():
         model_kwargs = {
             "torch_dtype": torch_dtype,
             "device_map": "auto",  # Automatically distribute across available GPUs
-            "trust_remote_code": True,
+        "trust_remote_code": True,
             "cache_dir": _DEFAULT_PERSISTENT_CACHE,
             "low_cpu_mem_usage": True,  # Reduce CPU memory usage during loading
             "attn_implementation": "flash_attention_2",  # Use Flash Attention if available
@@ -154,9 +154,9 @@ def handler(event_or_job: Dict[str, Any]) -> Dict[str, Any]:
     try:
         # Load model and tokenizer
         model, tokenizer = _load_model_and_tokenizer()
-        
+
         # Prepare input
-        prompt = _normalize_prompt(event)
+    prompt = _normalize_prompt(event)
         generation_config = _build_generation_config(event)
         
         # Set pad_token_id and eos_token_id
@@ -189,10 +189,10 @@ def handler(event_or_job: Dict[str, Any]) -> Dict[str, Any]:
             decoded_text = tokenizer.decode(new_tokens, skip_special_tokens=True)
             text_outputs.append(decoded_text.strip())
 
-        return {
-            "model": MODEL_ID,
-            "outputs": [
-                {
+    return {
+        "model": MODEL_ID,
+        "outputs": [
+            {
                     "text": text,
                     "finish_reason": "stop",
                 }
@@ -213,8 +213,8 @@ def handler(event_or_job: Dict[str, Any]) -> Dict[str, Any]:
                     "text": f"Error: {str(e)}",
                     "finish_reason": "error",
                 }
-            ],
-        }
+        ],
+    }
 
 
 def start() -> None:

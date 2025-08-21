@@ -37,7 +37,7 @@ RUN mkdir -p /runpod-volume/hf_cache || true
 
 # Production config for B200 Blackwell inference: DeepSeek-V3.1 + CUDA 13.0 + optimized sm_100
 ENV MODEL_ID=deepseek-ai/DeepSeek-V3.1 \
-    TORCH_DTYPE=fp8 \
+    TORCH_DTYPE=bfloat16 \
     MAX_NEW_TOKENS=512 \
     THINKING_MODE=false \
     GPU_MEMORY_UTILIZATION=0.90
