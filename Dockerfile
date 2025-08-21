@@ -17,10 +17,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ln -s /usr/bin/python3 /usr/bin/python && \
     rm -rf /var/lib/apt/lists/*
 
-# PyTorch + DeepSeek-Infer dependencies with B200 support + runpod runtime
+# PyTorch 2.7.0+ with optimized B200/Blackwell kernels + runpod runtime
 RUN pip install --upgrade pip && \
     pip install --no-cache-dir --extra-index-url https://download.pytorch.org/whl/cu124 \
-        torch torchvision torchaudio triton && \
+        "torch>=2.7.0" "torchvision>=0.20.0" "torchaudio>=2.7.0" triton && \
     pip install --no-cache-dir transformers==4.46.3 safetensors==0.4.5 && \
     pip install --no-cache-dir runpod accelerate bitsandbytes
 
@@ -34,7 +34,7 @@ COPY handler.py /app/handler.py
 # Ensure persistent cache directory exists at runtime
 RUN mkdir -p /runpod-volume/hf_cache || true
 
-# Config for B200 GPU: DeepSeek-V3.1 with FP8 quantization + Flash Attention + Thinking Mode
+# Config for B200 Blackwell GPU: DeepSeek-V3.1 with FP8 quantization + optimized sm_100 kernels
 ENV MODEL_ID=deepseek-ai/DeepSeek-V3.1 \
     TORCH_DTYPE=fp8 \
     MAX_NEW_TOKENS=512 \
