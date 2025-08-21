@@ -1,4 +1,4 @@
-FROM nvidia/cuda:12.4.1-cudnn8-runtime-ubuntu22.04
+FROM nvidia/cuda:13.0.0-cudnn-runtime-ubuntu22.04
 
 ENV DEBIAN_FRONTEND=noninteractive \
     PIP_NO_CACHE_DIR=1 \
@@ -11,18 +11,16 @@ ENV DEBIAN_FRONTEND=noninteractive \
 
 WORKDIR /app
 
-# System deps including C++ compiler, CUDA dev tools, and MPI for TensorRT-LLM
+# System deps for inference - minimal build tools for Python packages
 RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 python3-pip python3-dev git ca-certificates \
-    build-essential gcc g++ \
-    cuda-nvcc-12-4 cuda-cudart-dev-12-4 \
-    libopenmpi-dev openmpi-bin && \
+    build-essential gcc g++ && \
     ln -s /usr/bin/python3 /usr/bin/python && \
     rm -rf /var/lib/apt/lists/*
 
-# PyTorch 2.7.0+ with optimized B200/Blackwell kernels + runpod runtime
+# PyTorch 2.7.0+ with optimized B200/Blackwell kernels for CUDA 13.0
 RUN pip install --upgrade pip && \
-    pip install --no-cache-dir --extra-index-url https://download.pytorch.org/whl/cu124 \
+    pip install --no-cache-dir --extra-index-url https://download.pytorch.org/whl/cu130 \
         "torch>=2.7.0" "torchvision>=0.20.0" "torchaudio>=2.7.0" triton && \
     pip install --no-cache-dir transformers==4.46.3 safetensors==0.4.5 && \
     pip install --no-cache-dir runpod accelerate bitsandbytes
@@ -37,7 +35,7 @@ COPY handler.py /app/handler.py
 # Ensure persistent cache directory exists at runtime
 RUN mkdir -p /runpod-volume/hf_cache || true
 
-# Config for B200 Blackwell GPU: DeepSeek-V3.1 with FP8 quantization + optimized sm_100 kernels
+# Production config for B200 Blackwell inference: DeepSeek-V3.1 + CUDA 13.0 + optimized sm_100
 ENV MODEL_ID=deepseek-ai/DeepSeek-V3.1 \
     TORCH_DTYPE=fp8 \
     MAX_NEW_TOKENS=512 \
