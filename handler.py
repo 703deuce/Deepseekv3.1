@@ -5,9 +5,23 @@ import torch
 from typing import Any, Dict, Optional, List
 import runpod
 
-# Add DeepSeek-V3 official inference to Python path
-sys.path.append('/app/deepseek-v3')
-sys.path.append('/app/deepseek-v3/inference')
+# Setup DeepSeek-V3 official inference path (use network volume for persistence)
+DEEPSEEK_REPO_PATH = "/runpod-volume/deepseek-v3"
+
+# Copy repo to network volume if not already there (for persistence across workers)
+if not os.path.exists(DEEPSEEK_REPO_PATH) and os.path.exists("/app/deepseek-v3"):
+    import shutil
+    print("Copying DeepSeek repo to network volume for persistence...")
+    shutil.copytree("/app/deepseek-v3", DEEPSEEK_REPO_PATH)
+    print("✅ DeepSeek repo copied to network volume")
+
+# Fallback to app directory if network volume copy failed
+if not os.path.exists(DEEPSEEK_REPO_PATH):
+    DEEPSEEK_REPO_PATH = "/app/deepseek-v3"
+    print("Using DeepSeek repo from app directory")
+
+sys.path.append(DEEPSEEK_REPO_PATH)
+sys.path.append(f"{DEEPSEEK_REPO_PATH}/inference")
 
 # Import DeepSeek's official FP8 inference modules
 try:

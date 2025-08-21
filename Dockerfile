@@ -25,10 +25,13 @@ RUN pip install --upgrade pip && \
     pip install --no-cache-dir transformers==4.46.3 safetensors==0.4.5 && \
     pip install --no-cache-dir runpod accelerate
 
-# Clone DeepSeek's official inference repo for true FP8 support
-RUN git clone https://github.com/deepseek-ai/DeepSeek-V3.git /app/deepseek-v3 && \
-    cd /app/deepseek-v3 && \
-    pip install --no-cache-dir -r requirements.txt
+# Download and setup DeepSeek's official inference repo for true FP8 support
+RUN apt-get update && apt-get install -y wget unzip && \
+    wget https://github.com/deepseek-ai/DeepSeek-V3/archive/main.zip -O /tmp/deepseek-v3.zip && \
+    unzip /tmp/deepseek-v3.zip -d /app/ && \
+    mv /app/DeepSeek-V3-main /app/deepseek-v3 && \
+    rm /tmp/deepseek-v3.zip && \
+    rm -rf /var/lib/apt/lists/*
 
 # Optional: HF token can be set at runtime via environment variables
 # ARG HF_TOKEN
