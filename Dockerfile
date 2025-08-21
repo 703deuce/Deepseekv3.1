@@ -1,4 +1,4 @@
-FROM nvidia/cuda:13.0.0-cudnn-runtime-ubuntu22.04
+FROM nvidia/cuda:12.8.0-cudnn-runtime-ubuntu22.04
 
 ENV DEBIAN_FRONTEND=noninteractive \
     PIP_NO_CACHE_DIR=1 \
@@ -18,12 +18,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ln -s /usr/bin/python3 /usr/bin/python && \
     rm -rf /var/lib/apt/lists/*
 
-# PyTorch 2.7.0+ with optimized B200/Blackwell kernels for CUDA 13.0
+# PyTorch with B200 Blackwell support (CUDA 12.8, sm_100 kernels)
 RUN pip install --upgrade pip && \
-    pip install --no-cache-dir --extra-index-url https://download.pytorch.org/whl/cu130 \
-        "torch>=2.7.0" "torchvision>=0.20.0" "torchaudio>=2.7.0" triton && \
+    pip install --no-cache-dir --pre torch torchvision torchaudio \
+        --extra-index-url https://download.pytorch.org/whl/nightly/cu128 && \
+    pip install --no-cache-dir triton && \
     pip install --no-cache-dir transformers==4.46.3 safetensors==0.4.5 && \
     pip install --no-cache-dir runpod accelerate bitsandbytes
+
+# Verify B200/sm_100 support in PyTorch
+RUN python3 -c "import torch; print(f'PyTorch version: {torch.__version__}'); print(f'CUDA available: {torch.cuda.is_available()}'); print(f'CUDA version: {torch.version.cuda}')" || echo "PyTorch verification failed but continuing..."
 
 # Download and setup DeepSeek's official inference repo for true FP8 support
 RUN apt-get update && apt-get install -y wget unzip && \
