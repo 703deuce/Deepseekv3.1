@@ -23,7 +23,7 @@ RUN pip install --upgrade pip && \
     pip install --no-cache-dir --extra-index-url https://download.pytorch.org/whl/cu130 \
         "torch>=2.7.0" "torchvision>=0.20.0" "torchaudio>=2.7.0" triton && \
     pip install --no-cache-dir transformers==4.46.3 safetensors==0.4.5 && \
-    pip install --no-cache-dir runpod accelerate
+    pip install --no-cache-dir runpod accelerate bitsandbytes
 
 # Download and setup DeepSeek's official inference repo for true FP8 support
 RUN apt-get update && apt-get install -y wget unzip && \

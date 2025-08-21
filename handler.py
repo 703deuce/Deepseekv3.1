@@ -252,14 +252,20 @@ def handler(event_or_job: Dict[str, Any]) -> Dict[str, Any]:
         temperature = float(event.get("temperature", 0.7))
         
         # Try to convert model to FP8 and use official scripts
-        if _convert_model_to_fp8():
-            print("Using DeepSeek official FP8 generation...")
-            generated_text = _generate_with_deepseek(prompt, max_new_tokens, temperature)
-            quantization_used = "fp8_official"
-        else:
+        try:
+            if _convert_model_to_fp8():
+                print("Using DeepSeek official FP8 generation...")
+                generated_text = _generate_with_deepseek(prompt, max_new_tokens, temperature)
+                quantization_used = "fp8_official"
+            else:
+                print("DeepSeek FP8 conversion failed, using Transformers fallback...")
+                generated_text = _generate_with_transformers(prompt, max_new_tokens, temperature)
+                quantization_used = "8bit_transformers"
+        except Exception as conversion_error:
+            print(f"DeepSeek conversion error: {conversion_error}")
             print("Using Transformers with 8-bit quantization fallback...")
             generated_text = _generate_with_transformers(prompt, max_new_tokens, temperature)
-            quantization_used = "8bit_transformers"
+            quantization_used = "8bit_transformers_fallback"
         
         # Format response for RunPod
         return {
