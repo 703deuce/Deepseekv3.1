@@ -146,7 +146,13 @@ def _generate_with_deepseek(prompt: str, max_new_tokens: int = 512, temperature:
         else:
             print(f"❌ Generation failed (stdout): {result.stdout}")
             print(f"❌ Generation failed (stderr): {result.stderr}")
-            return f"Generation failed: {result.stderr[:200]}..."
+            # Return more detailed error information
+            error_info = f"Generation failed (exit code {result.returncode}). "
+            if result.stderr:
+                error_info += f"Error: {result.stderr[:400]}..."
+            if result.stdout:
+                error_info += f"Output: {result.stdout[:400]}..."
+            return error_info
             
     except Exception as e:
         print(f"❌ Generation error: {e}")

@@ -31,7 +31,9 @@ RUN apt-get update && apt-get install -y wget unzip && \
     unzip /tmp/deepseek-v3.zip -d /app/ && \
     mv /app/DeepSeek-V3-main /app/deepseek-v3 && \
     rm /tmp/deepseek-v3.zip && \
-    rm -rf /var/lib/apt/lists/*
+    rm -rf /var/lib/apt/lists/* && \
+    cd /app/deepseek-v3/inference && \
+    pip install --no-cache-dir -r requirements.txt
 
 # Optional: HF token can be set at runtime via environment variables
 # ARG HF_TOKEN
