@@ -119,17 +119,14 @@ def _generate_with_deepseek(prompt: str, max_new_tokens: int = 512, temperature:
         inference_dir = os.path.join(DEEPSEEK_REPO_PATH, "inference")
         os.chdir(inference_dir)
         
-        # Create temporary input file
+        # Create temporary input file for batch inference
         with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False) as f:
             f.write(prompt)
             input_file = f.name
         
-        # Create temporary output file
-        output_file = tempfile.mktemp(suffix='.txt')
-        
-        # Run the generation script (based on GitHub docs)
+        # Run the generation script in batch mode
         generate_cmd = [
-            "torchrun", "--nproc_per_node=1", "generate.py",
+            "python", "generate.py",
             "--ckpt-path", _CONVERTED_MODEL_PATH,
             "--config", "configs/config_671B.json",
             "--input-file", input_file,
@@ -138,21 +135,18 @@ def _generate_with_deepseek(prompt: str, max_new_tokens: int = 512, temperature:
         ]
         
         print(f"Generating with DeepSeek FP8: {' '.join(generate_cmd)}")
-        result = subprocess.run(generate_cmd, capture_output=True, text=True, timeout=300)  # 5 min timeout
+        result = subprocess.run(generate_cmd, capture_output=True, text=True, timeout=300, input=prompt)
+        
+        # Clean up temporary file
+        os.unlink(input_file)
         
         if result.returncode == 0:
-            # Read the generated output
-            with open(output_file, 'r') as f:
-                generated_text = f.read().strip()
-            
-            # Clean up temporary files
-            os.unlink(input_file)
-            os.unlink(output_file)
-            
-            return generated_text
+            # Return the stdout output
+            return result.stdout.strip()
         else:
-            print(f"❌ Generation failed: {result.stderr}")
-            return f"Generation failed: {result.stderr}"
+            print(f"❌ Generation failed (stdout): {result.stdout}")
+            print(f"❌ Generation failed (stderr): {result.stderr}")
+            return f"Generation failed: {result.stderr[:200]}..."
             
     except Exception as e:
         print(f"❌ Generation error: {e}")
