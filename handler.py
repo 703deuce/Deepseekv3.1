@@ -84,13 +84,11 @@ def _load_model_and_tokenizer():
             try:
                 from transformers import BitsAndBytesConfig
                 quantization_config = BitsAndBytesConfig(
-                    load_in_8bit=False,
-                    load_in_4bit=False,
-                    bnb_4bit_compute_dtype=torch.bfloat16,
+                    load_in_8bit=True,
                     bnb_8bit_compute_dtype=torch.bfloat16,
                 )
                 model_kwargs["quantization_config"] = quantization_config
-                print("Using FP8-style quantization via BitsAndBytesConfig")
+                print("Using 8-bit quantization via BitsAndBytesConfig for FP8-like efficiency")
             except ImportError:
                 print("BitsAndBytesConfig not available, using bfloat16 instead")
         

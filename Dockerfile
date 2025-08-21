@@ -1,10 +1,13 @@
-FROM nvidia/cuda:12.1.1-cudnn8-runtime-ubuntu22.04
+FROM nvidia/cuda:12.4.1-cudnn8-runtime-ubuntu22.04
 
 ENV DEBIAN_FRONTEND=noninteractive \
     PIP_NO_CACHE_DIR=1 \
     HF_HOME=/runpod-volume/hf_cache \
     HUGGINGFACE_HUB_CACHE=/runpod-volume/hf_cache \
-    TRANSFORMERS_CACHE=/runpod-volume/hf_cache
+    TRANSFORMERS_CACHE=/runpod-volume/hf_cache \
+    CUDA_VISIBLE_DEVICES=0 \
+    NVIDIA_VISIBLE_DEVICES=all \
+    NVIDIA_DRIVER_CAPABILITIES=compute,utility
 
 WORKDIR /app
 
@@ -12,7 +15,7 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 python3-pip python3-dev git ca-certificates \
     build-essential gcc g++ \
-    cuda-nvcc-12-1 cuda-cudart-dev-12-1 \
+    cuda-nvcc-12-4 cuda-cudart-dev-12-4 \
     libopenmpi-dev openmpi-bin && \
     ln -s /usr/bin/python3 /usr/bin/python && \
     rm -rf /var/lib/apt/lists/*
