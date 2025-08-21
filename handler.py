@@ -41,8 +41,8 @@ _MODEL_CONVERTED = False
 
 def _check_deepseek_scripts():
     """Check if DeepSeek conversion scripts are available."""
-    convert_script = os.path.join(DEEPSEEK_REPO_PATH, "convert.py")
-    generate_script = os.path.join(DEEPSEEK_REPO_PATH, "generate.py")
+    convert_script = os.path.join(DEEPSEEK_REPO_PATH, "inference", "convert.py")
+    generate_script = os.path.join(DEEPSEEK_REPO_PATH, "inference", "generate.py")
     
     print(f"Checking for DeepSeek scripts...")
     print(f"DeepSeek repo path: {DEEPSEEK_REPO_PATH}")
@@ -78,17 +78,18 @@ def _convert_model_to_fp8():
     print(f"Converting DeepSeek-V3.1 to FP8 quantization...")
     
     try:
-        # Change to DeepSeek repo directory
+        # Change to DeepSeek inference directory
         original_cwd = os.getcwd()
-        os.chdir(DEEPSEEK_REPO_PATH)
+        inference_dir = os.path.join(DEEPSEEK_REPO_PATH, "inference")
+        os.chdir(inference_dir)
         
         # Run the conversion script
         convert_cmd = [
             "python", "convert.py",
             "--hf-ckpt-path", MODEL_ID,
             "--save-path", _CONVERTED_MODEL_PATH,
-            "--quant-mode", QUANTIZATION_MODE,
-            "--cache-dir", _DEFAULT_PERSISTENT_CACHE
+            "--n-experts", "256",
+            "--model-parallel", "16"
         ]
         
         print(f"Running conversion: {' '.join(convert_cmd)}")
@@ -113,9 +114,10 @@ def _generate_with_deepseek(prompt: str, max_new_tokens: int = 512, temperature:
     """Generate text using DeepSeek's official generate.py script with FP8."""
     
     try:
-        # Change to DeepSeek repo directory
+        # Change to DeepSeek inference directory
         original_cwd = os.getcwd()
-        os.chdir(DEEPSEEK_REPO_PATH)
+        inference_dir = os.path.join(DEEPSEEK_REPO_PATH, "inference")
+        os.chdir(inference_dir)
         
         # Create temporary input file
         with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False) as f:
@@ -125,19 +127,15 @@ def _generate_with_deepseek(prompt: str, max_new_tokens: int = 512, temperature:
         # Create temporary output file
         output_file = tempfile.mktemp(suffix='.txt')
         
-        # Run the generation script
+        # Run the generation script (based on GitHub docs)
         generate_cmd = [
             "torchrun", "--nproc_per_node=1", "generate.py",
             "--ckpt-path", _CONVERTED_MODEL_PATH,
+            "--config", "configs/config_671B.json",
             "--input-file", input_file,
-            "--output-file", output_file,
-            "--max-new-tokens", str(max_new_tokens),
             "--temperature", str(temperature),
-            "--quant-mode", QUANTIZATION_MODE
+            "--max-new-tokens", str(max_new_tokens)
         ]
-        
-        if THINKING_MODE:
-            generate_cmd.extend(["--thinking-mode"])
         
         print(f"Generating with DeepSeek FP8: {' '.join(generate_cmd)}")
         result = subprocess.run(generate_cmd, capture_output=True, text=True, timeout=300)  # 5 min timeout
@@ -178,66 +176,10 @@ def _normalize_prompt(event: Dict[str, Any]) -> str:
             parts.append(f"{role}: {content}")
         parts.append("assistant:")
         return "\n".join(parts)
-    
+
     # Default prompt
     return "Hello, DeepSeek!"
 
-
-def _generate_with_transformers(prompt: str, max_new_tokens: int = 512, temperature: float = 0.7) -> str:
-    """Fallback generation using Transformers with 8-bit quantization."""
-    try:
-        from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
-        import torch
-        
-        print("Loading model with Transformers + 8-bit quantization...")
-        
-        # Load tokenizer
-        tokenizer = AutoTokenizer.from_pretrained(
-            MODEL_ID,
-            trust_remote_code=True,
-            cache_dir=_DEFAULT_PERSISTENT_CACHE
-        )
-        
-        # Configure 8-bit quantization
-        quantization_config = BitsAndBytesConfig(
-            load_in_8bit=True
-        )
-        
-        # Load model with 8-bit quantization
-        model = AutoModelForCausalLM.from_pretrained(
-            MODEL_ID,
-            quantization_config=quantization_config,
-            torch_dtype=torch.bfloat16,
-            device_map="auto",
-            trust_remote_code=True,
-            cache_dir=_DEFAULT_PERSISTENT_CACHE,
-            low_cpu_mem_usage=True
-        )
-        
-        # Tokenize input
-        inputs = tokenizer(prompt, return_tensors="pt", padding=True, truncation=True, max_length=4096)
-        inputs = {k: v.to(model.device) for k, v in inputs.items()}
-        
-        # Generate
-        with torch.no_grad():
-            outputs = model.generate(
-                **inputs,
-                max_new_tokens=max_new_tokens,
-                temperature=temperature,
-                do_sample=temperature > 0.0,
-                pad_token_id=tokenizer.eos_token_id,
-                eos_token_id=tokenizer.eos_token_id
-            )
-        
-        # Decode only the new tokens
-        input_length = inputs['input_ids'].shape[1]
-        generated_tokens = outputs[0][input_length:]
-        generated_text = tokenizer.decode(generated_tokens, skip_special_tokens=True)
-        
-        return generated_text
-        
-    except Exception as e:
-        return f"Transformers generation failed: {e}"
 
 
 def handler(event_or_job: Dict[str, Any]) -> Dict[str, Any]:
@@ -252,20 +194,15 @@ def handler(event_or_job: Dict[str, Any]) -> Dict[str, Any]:
         temperature = float(event.get("temperature", 0.7))
         
         # Try to convert model to FP8 and use official scripts
-        try:
-            if _convert_model_to_fp8():
-                print("Using DeepSeek official FP8 generation...")
-                generated_text = _generate_with_deepseek(prompt, max_new_tokens, temperature)
-                quantization_used = "fp8_official"
-            else:
-                print("DeepSeek FP8 conversion failed, using Transformers fallback...")
-                generated_text = _generate_with_transformers(prompt, max_new_tokens, temperature)
-                quantization_used = "8bit_transformers"
-        except Exception as conversion_error:
-            print(f"DeepSeek conversion error: {conversion_error}")
-            print("Using Transformers with 8-bit quantization fallback...")
-            generated_text = _generate_with_transformers(prompt, max_new_tokens, temperature)
-            quantization_used = "8bit_transformers_fallback"
+        if _convert_model_to_fp8():
+            print("Using DeepSeek official FP8 generation...")
+            generated_text = _generate_with_deepseek(prompt, max_new_tokens, temperature)
+            quantization_used = "fp8_official"
+        else:
+            return {
+                "error": "Failed to convert model to FP8",
+                "status": "FAILED"
+            }
         
         # Format response for RunPod
         return {
@@ -284,7 +221,7 @@ def handler(event_or_job: Dict[str, Any]) -> Dict[str, Any]:
         return {
             "error": str(e),
             "status": "FAILED"
-        }
+    }
 
 
 def start() -> None:
