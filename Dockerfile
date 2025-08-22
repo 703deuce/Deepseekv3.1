@@ -5,7 +5,6 @@ ENV DEBIAN_FRONTEND=noninteractive \
     HF_HOME=/runpod-volume/hf_cache \
     HUGGINGFACE_HUB_CACHE=/runpod-volume/hf_cache \
     TRANSFORMERS_CACHE=/runpod-volume/hf_cache \
-    CUDA_VISIBLE_DEVICES=0 \
     NVIDIA_VISIBLE_DEVICES=all \
     NVIDIA_DRIVER_CAPABILITIES=compute,utility
 

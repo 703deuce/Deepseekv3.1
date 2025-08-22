@@ -39,6 +39,43 @@ _CONVERTED_MODEL_PATH = "/runpod-volume/deepseek-v3-converted"
 _MODEL_CONVERTED = False
 
 
+def _check_gpu_environment():
+    """Check GPU and CUDA environment for debugging."""
+    import torch
+    import os
+    
+    print("🔍 Checking GPU and CUDA environment...")
+    print(f"PyTorch version: {torch.__version__}")
+    print(f"CUDA available: {torch.cuda.is_available()}")
+    
+    if torch.cuda.is_available():
+        print(f"CUDA version: {torch.version.cuda}")
+        print(f"GPU count: {torch.cuda.device_count()}")
+        
+        for i in range(torch.cuda.device_count()):
+            try:
+                device_name = torch.cuda.get_device_name(i)
+                device_capability = torch.cuda.get_device_capability(i)
+                print(f"GPU {i}: {device_name}, Compute Capability: {device_capability}")
+            except Exception as e:
+                print(f"GPU {i}: Error getting info - {e}")
+        
+        # Test basic CUDA functionality
+        try:
+            test_tensor = torch.rand(2, 2).cuda()
+            print("✅ CUDA test successful - GPU accessible")
+            return True
+        except Exception as e:
+            print(f"❌ CUDA test failed: {e}")
+            print("❌ This indicates a CUDA environment issue")
+            return False
+    else:
+        print("❌ CUDA not available - checking environment variables...")
+        print(f"CUDA_VISIBLE_DEVICES: {os.environ.get('CUDA_VISIBLE_DEVICES', 'not set')}")
+        print(f"NVIDIA_VISIBLE_DEVICES: {os.environ.get('NVIDIA_VISIBLE_DEVICES', 'not set')}")
+        return False
+
+
 def _check_deepseek_scripts():
     """Check if DeepSeek conversion scripts are available."""
     convert_script = os.path.join(DEEPSEEK_REPO_PATH, "inference", "convert.py")
@@ -197,6 +234,14 @@ def handler(event_or_job: Dict[str, Any]) -> Dict[str, Any]:
     event: Dict[str, Any] = event_or_job.get("input", event_or_job)
 
     try:
+        # Check GPU environment first
+        gpu_available = _check_gpu_environment()
+        if not gpu_available:
+            return {
+                "error": "GPU not accessible - check CUDA_VISIBLE_DEVICES and container GPU access",
+                "status": "FAILED"
+            }
+        
         # Prepare input
         prompt = _normalize_prompt(event)
         max_new_tokens = int(event.get("max_tokens", MAX_NEW_TOKENS))
